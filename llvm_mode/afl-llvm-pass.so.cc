@@ -393,16 +393,22 @@ bool AFLCoverage::runOnModule(Module &M) {
       if (has_BBs) {
         /* Print CFG */
         std::string cfgFileName = dotfiles + "/cfg." + funcName + ".dot";
-        std::error_code EC;
-        llvm::raw_fd_ostream cfgFile(cfgFileName, EC);
-        if (!EC) {
-          WriteGraph(cfgFile, &F, true);
-        }
+        struct stat buffer;
+        if (stat (cfgFileName.c_str(), &buffer) != 0) {
+          FILE *cfgFILE = fopen(cfgFileName.c_str(), "w");
+          if (cfgFILE) {
+            raw_ostream *cfgFile =
+              new llvm::raw_fd_ostream(fileno(cfgFILE), false, true);
+
+            WriteGraph(*cfgFile, (const Function*)&F, true);
+            fflush(cfgFILE);
+            fclose(cfgFILE);
+		  }
 
         if (is_target)
           ftargets << F.getName().str() << "\n";
         fnames << F.getName().str() << "\n";
-      }
+        }
     }
 
   } else {
