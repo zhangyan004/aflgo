@@ -232,6 +232,7 @@ static s32 cpu_aff = -1;       	      /* Selected CPU core                */
 #endif /* HAVE_AFFINITY */
 
 static FILE* plot_file;               /* Gnuplot output file              */
+static FILE* branch_file;  
 
 struct queue_entry {
 
@@ -4747,6 +4748,17 @@ static u32 choose_block_len(u32 limit) {
 
 }
 
+/* Update the branch file  */
+
+static void update_branch_file(u64 filename , double distance, u32 score) {
+
+  fprintf(branch_file, 
+          "%llu, %llu, %0.02f%%, %u\n",
+          get_cur_time() / 1000, filename , distance, score ); /* ignore errors */
+  fflush(branch_file);
+
+}
+
 
 /* Calculate case desirability score to adjust the length of havoc fuzzing.
    A helper function for fuzz_one(). Maybe some of these constants should
@@ -4871,7 +4883,11 @@ static u32 calculate_score(struct queue_entry* q) {
 
   /* AFLGO-DEBUGGING */
   fprintf(stderr, "\n [Time %llu] q->distance: %4lf, max_distance: %4lf min_distance: %4lf, T: %4.3lf, power_factor: %4.3lf, adjusted perf_score: %4d\n", t, q->distance, max_distance, min_distance, T, power_factor, perf_score);
-
+  
+  u64 filename = *(q->filename);
+  
+  update_branch_file(filename, normalized_d, perf_score);
+  
   return perf_score;
 
 }
@@ -7333,6 +7349,18 @@ EXP_ST void setup_dirs_fds(void) {
                      "pending_total, pending_favs, map_size, unique_crashes, "
                      "unique_hangs, max_depth, execs_per_sec\n");
                      /* ignore errors */
+					 
+/* Output fre_br_counts, infre_br_counts, total_br_counts, fre_factor and perf_score */
+   
+  tmp = alloc_printf("%s/branch_data", out_dir);
+  fd = open(tmp, O_WRONLY | O_CREAT | O_EXCL, 0600);
+  if (fd < 0) PFATAL("Unable to create '%s'", tmp);
+  ck_free(tmp);
+
+  branch_file = fdopen(fd, "w");
+  if (!branch_file) PFATAL("fdopen() failed");
+
+  fprintf(branch_file, "# unix_time, filename, distance, perf_score\n");
 
 }
 
@@ -8271,6 +8299,7 @@ stop_fuzzing:
   }
 
   fclose(plot_file);
+  fclose(branch_file);
   destroy_queue();
   destroy_extras();
   ck_free(target_path);
