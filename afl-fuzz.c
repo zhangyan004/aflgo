@@ -4860,9 +4860,9 @@ static u32 calculate_score(struct queue_entry* q) {
   }
 
   double power_factor = 1.0;
+  double normalized_d = -1.0;
   if (q->distance > 0) {
-
-    double normalized_d = q->distance;
+	  normalized_d = q->distance;
     if (max_distance != min_distance)
       normalized_d = (q->distance - min_distance) / (max_distance - min_distance);
 
@@ -4884,7 +4884,7 @@ static u32 calculate_score(struct queue_entry* q) {
   /* AFLGO-DEBUGGING */
   fprintf(stderr, "\n [Time %llu] q->distance: %4lf, max_distance: %4lf min_distance: %4lf, T: %4.3lf, power_factor: %4.3lf, adjusted perf_score: %4d\n", t, q->distance, max_distance, min_distance, T, power_factor, perf_score);
   
-  u64 filename = *(q->filename);
+  u64 filename = *(q->fname);
   
   update_branch_file(filename, normalized_d, perf_score);
   
